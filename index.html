@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VenueHub | Premium Venue Booking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#home" data-route="home">
+      <span class="brand-mark">VH</span>
+      <span>VenueHub</span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#home" data-route="home">Home</a>
+      <a href="#search" data-route="search">Discover</a>
+      <a href="#chat" data-route="chat" data-auth-link>Chat</a>
+      <a href="#ownerProfile" data-route="ownerProfile" data-owner-link class="hidden">Owner Profile</a>
+      <a href="#owner" data-route="owner" data-owner-link class="hidden">Owner Studio</a>
+      <a href="#admin" data-route="admin" data-admin-link class="hidden">Admin</a>
+    </nav>
+    <div class="top-actions">
+      <div class="role-switcher hidden" id="adminSwitcher">
+        <span>View as</span>
+        <select id="roleSwitcher" aria-label="Admin view switcher">
+          <option value="admin">Admin</option>
+          <option value="user">User</option>
+          <option value="client">Client</option>
+          <option value="owner">Venue Owner</option>
+        </select>
+      </div>
+      <button class="icon-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
+        <i data-lucide="moon"></i>
+      </button>
+      <button class="account-pill hidden" id="accountPill" type="button" data-open-auth></button>
+      <button class="btn btn-ghost hidden" id="signOutBtn">Log out</button>
+      <button class="btn btn-ghost" id="loginBtn" data-open-auth>Log in</button>
+      <button class="btn btn-primary" data-route="search">Explore</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="home" class="page active">
+      <div class="hero">
+        <div class="hero-media" role="img" aria-label="Luxury event venue"></div>
+        <div class="hero-content">
+          <span class="eyebrow">Premium venue discovery</span>
+          <h1>Find the perfect venue where memories are created</h1>
+          <p>Explore verified spaces for weddings, parties, corporate gatherings, and private functions with booking, chat, and approval workflows in one elegant place.</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary btn-large" data-route="search">Explore Venues</button>
+            <button class="btn btn-soft" data-route="owner">List your venue</button>
+          </div>
+        </div>
+      </div>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Featured locations</span>
+            <h2>Find by City</h2>
+          </div>
+          <button class="text-btn" data-route="search">View all venues</button>
+        </div>
+        <div class="city-grid" id="cityGrid"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Event styles</span>
+            <h2>Browse by Category</h2>
+          </div>
+        </div>
+        <div class="category-grid" id="categoryGrid"></div>
+      </section>
+    </section>
+
+    <section id="search" class="page">
+      <div class="page-hero compact">
+        <span class="eyebrow">Smart discovery</span>
+        <h1>Discover verified venues</h1>
+        <div class="search-shell">
+          <i data-lucide="search"></i>
+          <input id="globalSearch" type="search" placeholder="Search by venue, city, service, or event type" />
+        </div>
+      </div>
+      <section class="discovery-layout">
+        <aside class="filters">
+          <div class="filter-head">
+            <h3>Filters</h3>
+            <button class="text-btn" id="resetFilters">Reset</button>
+          </div>
+          <label>Location
+            <select id="locationFilter">
+              <option value="">All cities</option>
+            </select>
+          </label>
+          <label>Event type
+            <select id="eventFilter">
+              <option value="">All events</option>
+            </select>
+          </label>
+          <label>Capacity
+            <input id="capacityFilter" type="range" min="50" max="1200" value="1200" step="50" />
+            <span class="range-value"><span id="capacityValue">1200</span> guests</span>
+          </label>
+          <label>Max price
+            <input id="priceFilter" type="range" min="50000" max="900000" value="900000" step="25000" />
+            <span class="range-value">Rs <span id="priceValue">900000</span></span>
+          </label>
+        </aside>
+        <div class="results">
+          <div class="results-meta">
+            <div>
+              <h2>Available venues</h2>
+              <p id="resultCount">Loading curated matches...</p>
+            </div>
+            <div class="segmented" role="tablist" aria-label="View mode">
+              <button class="active"><i data-lucide="layout-grid"></i></button>
+              <button><i data-lucide="list"></i></button>
+            </div>
+          </div>
+          <div class="skeleton-grid" id="skeletonGrid">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="venue-grid" id="venueGrid"></div>
+          <div class="empty-state hidden" id="emptyState">
+            <i data-lucide="calendar-x"></i>
+            <h3>No venues match these filters</h3>
+            <p>Try adjusting city, guest count, price, or event type.</p>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section id="profile" class="page">
+      <div class="profile-shell">
+        <button class="text-btn back-btn" data-route="search"><i data-lucide="arrow-left"></i> Back to venues</button>
+        <div class="profile-title">
+          <div>
+            <span class="status-pill verified"><i data-lucide="badge-check"></i> Admin verified</span>
+            <h1 id="profileName">Venue name</h1>
+            <p id="profileLocation">Location</p>
+          </div>
+          <div class="profile-actions">
+            <button class="btn btn-soft" data-route="chat"><i data-lucide="message-circle"></i> Chat</button>
+            <button class="btn btn-primary" data-route="booking">Book now</button>
+          </div>
+        </div>
+        <div class="gallery" id="profileGallery"></div>
+        <div class="profile-content">
+          <article class="details-panel">
+            <h2>Venue Details</h2>
+            <div class="detail-grid" id="detailGrid"></div>
+          </article>
+          <aside class="booking-card">
+            <h3>Starting from</h3>
+            <strong id="profilePrice">Rs 0</strong>
+            <p>Final pricing depends on dates, guest count, services, and selected setup.</p>
+            <button class="btn btn-primary full" data-route="booking">Check dates</button>
+            <button class="btn btn-soft full" data-route="chat">Message owner</button>
+          </aside>
+        </div>
+        <section class="map-section">
+          <div>
+            <span class="eyebrow">Exact location</span>
+            <h2>Address and map</h2>
+            <p id="profileAddress">Address</p>
+          </div>
+          <iframe id="mapFrame" title="Venue map" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        </section>
+      </div>
+    </section>
+
+    <section id="booking" class="page">
+      <div class="booking-layout">
+        <section class="calendar-panel">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Calendar booking</span>
+              <h1>Choose your dates</h1>
+            </div>
+            <div class="calendar-nav">
+              <button class="icon-btn" id="prevMonth" aria-label="Previous month"><i data-lucide="chevron-left"></i></button>
+              <strong id="calendarLabel">Month</strong>
+              <button class="icon-btn" id="nextMonth" aria-label="Next month"><i data-lucide="chevron-right"></i></button>
+            </div>
+          </div>
+          <div class="calendar" id="calendar"></div>
+          <div class="calendar-legend">
+            <span><b class="dot available"></b>Available</span>
+            <span><b class="dot selected"></b>Selected</span>
+            <span><b class="dot booked"></b>Booked</span>
+          </div>
+        </section>
+        <form class="form-card" id="bookingForm">
+          <span class="eyebrow">Booking request</span>
+          <h2 id="bookingVenueName">Book Venue</h2>
+          <div class="date-summary">
+            <span>From <strong id="fromDate">Select</strong></span>
+            <span>To <strong id="toDate">Select</strong></span>
+          </div>
+          <div class="form-grid">
+            <label>Name<input required name="name" placeholder="Your name" /></label>
+            <label>Email<input required type="email" name="email" placeholder="you@example.com" /></label>
+            <label>Phone<input required name="phone" placeholder="+91 98765 43210" /></label>
+            <label>Event type
+              <select required name="eventType">
+                <option>Wedding</option><option>Birthday</option><option>Corporate</option><option>Private Party</option>
+              </select>
+            </label>
+            <label>Guests<input required type="number" name="guests" min="20" placeholder="250" /></label>
+          </div>
+          <fieldset>
+            <legend>Services required</legend>
+            <label><input type="checkbox" name="services" value="Catering" /> Catering</label>
+            <label><input type="checkbox" name="services" value="Decoration" /> Decoration</label>
+            <label><input type="checkbox" name="services" value="DJ" /> DJ</label>
+            <label><input type="checkbox" name="services" value="Parking" /> Parking</label>
+          </fieldset>
+          <button class="btn btn-primary full" type="submit">Send booking request</button>
+          <p class="form-note" id="bookingNote">Firestore would store this request and notify the owner in real time.</p>
+        </form>
+      </div>
+    </section>
+
+    <section id="chat" class="page">
+      <div class="chat-app">
+        <aside class="conversation-list">
+          <div class="chat-head">
+            <h1>Messages</h1>
+            <button class="icon-btn"><i data-lucide="edit-3"></i></button>
+          </div>
+          <div id="conversationList"></div>
+        </aside>
+        <section class="chat-window">
+          <div class="chat-window-head">
+            <div>
+              <strong id="chatVenueName">Venue Owner</strong>
+              <span>Typically replies in 5 minutes</span>
+            </div>
+            <span class="status-pill live"><i data-lucide="radio"></i> Live</span>
+          </div>
+          <div class="messages" id="messages"></div>
+          <form class="chat-input" id="chatForm">
+            <input id="messageInput" placeholder="Message the venue owner..." />
+            <button class="btn btn-primary" type="submit"><i data-lucide="send"></i></button>
+          </form>
+        </section>
+      </div>
+    </section>
+
+    <section id="ownerProfile" class="page">
+      <div class="owner-profile-shell">
+        <div class="owner-cover" role="img" aria-label="Owner venue cover image"></div>
+        <section class="owner-profile-card">
+          <div class="owner-avatar"></div>
+          <div class="owner-profile-main">
+            <div class="owner-profile-top">
+              <div>
+                <span class="eyebrow">Venue owner profile</span>
+                <h1>Ivory Estate Co.</h1>
+                <p>@ivoryestate.delhi</p>
+              </div>
+              <div class="profile-actions">
+                <button class="btn btn-soft" data-route="owner"><i data-lucide="plus"></i> Add venue</button>
+                <button class="btn btn-primary" data-route="profile"><i data-lucide="eye"></i> View public listing</button>
+              </div>
+            </div>
+            <div class="owner-stats">
+              <span><strong>4</strong> listings</span>
+              <span><strong>128</strong> bookings</span>
+              <span><strong>4.9</strong> rating</span>
+              <span><strong>12m</strong> avg reply</span>
+            </div>
+            <p class="owner-bio">Premium wedding, corporate, and private event venues across Delhi NCR with in-house styling, operations, guest management, and weather-safe planning.</p>
+            <div class="owner-tools">
+              <button class="btn btn-soft"><i data-lucide="settings"></i> Edit profile</button>
+              <button class="btn btn-soft"><i data-lucide="calendar-check"></i> Manage bookings</button>
+              <button class="btn btn-soft"><i data-lucide="message-circle"></i> Owner inbox</button>
+            </div>
+          </div>
+        </section>
+        <section class="owner-dashboard-grid">
+          <article class="owner-panel">
+            <div class="panel-head">
+              <h2>Listings</h2>
+              <span class="status-pill pending">1 pending</span>
+            </div>
+            <div class="owner-listing">
+              <span class="owner-listing-img"></span>
+              <div>
+                <strong>The Ivory Estate</strong>
+                <p>Approved - visible publicly</p>
+              </div>
+              <span class="status-pill verified">Live</span>
+            </div>
+            <div class="owner-listing">
+              <span class="owner-listing-img alt"></span>
+              <div>
+                <strong>Riverstone Pavilion</strong>
+                <p>Waiting for admin verification</p>
+              </div>
+              <span class="status-pill pending">Pending</span>
+            </div>
+          </article>
+          <article class="owner-panel">
+            <div class="panel-head">
+              <h2>Recent bookings</h2>
+              <button class="text-btn">View all</button>
+            </div>
+            <div class="mini-booking">
+              <span>May 24 - 26</span>
+              <strong>Wedding, 450 guests</strong>
+              <p>Client: Aditi Sharma</p>
+            </div>
+            <div class="mini-booking">
+              <span>June 3</span>
+              <strong>Corporate annual meet</strong>
+              <p>Client: Northstar Labs</p>
+            </div>
+          </article>
+        </section>
+        <section class="owner-post-grid" aria-label="Owner venue gallery">
+          <button style="--img:url('https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=900&q=80')"></button>
+          <button style="--img:url('https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=900&q=80')"></button>
+          <button style="--img:url('https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=900&q=80')"></button>
+          <button style="--img:url('https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&w=900&q=80')"></button>
+          <button style="--img:url('https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&w=900&q=80')"></button>
+          <button style="--img:url('https://images.unsplash.com/photo-1469371670807-013ccf25f16a?auto=format&fit=crop&w=900&q=80')"></button>
+        </section>
+      </div>
+    </section>
+
+    <section id="owner" class="page">
+      <div class="owner-layout">
+        <section class="page-hero side">
+          <span class="eyebrow">Owner panel</span>
+          <h1>Add a venue for admin verification</h1>
+          <p>New listings are saved with <strong>status = pending</strong> and stay private until the admin approves them.</p>
+          <div class="flow-steps">
+            <span>Signup</span><i data-lucide="arrow-right"></i><span>Add Venue</span><i data-lucide="arrow-right"></i><span>Approval</span>
+          </div>
+        </section>
+        <form class="form-card owner-form" id="venueForm">
+          <h2>Venue information</h2>
+          <div class="form-grid">
+            <label>Venue name<input required name="venueName" placeholder="The Ivory Estate" /></label>
+            <label>City<input required name="city" placeholder="Delhi" /></label>
+            <label class="wide">Description<textarea required name="description" placeholder="Describe the ambience, spaces, and event fit"></textarea></label>
+            <label class="wide">Address<input required name="address" placeholder="Full address" /></label>
+            <label>Google Maps link<input name="maps" placeholder="https://maps.google.com/..." /></label>
+            <label>Coordinates<input name="coordinates" placeholder="28.6139, 77.2090" /></label>
+            <label>Min guests<input type="number" name="minGuests" placeholder="80" /></label>
+            <label>Max guests<input type="number" name="maxGuests" placeholder="600" /></label>
+            <label>Cost per day<input type="number" name="price" placeholder="250000" /></label>
+            <label>Space type
+              <select name="space">
+                <option>Indoor + Outdoor</option><option>Indoor</option><option>Outdoor</option>
+              </select>
+            </label>
+            <label class="wide">Gallery upload<input type="file" multiple accept="image/*" /></label>
+          </div>
+          <fieldset>
+            <legend>Services</legend>
+            <label><input type="checkbox" checked /> Wedding</label>
+            <label><input type="checkbox" /> Birthday</label>
+            <label><input type="checkbox" /> Corporate</label>
+            <label><input type="checkbox" /> Private events</label>
+          </fieldset>
+          <fieldset>
+            <legend>Facilities</legend>
+            <label><input type="checkbox" /> Catering</label>
+            <label><input type="checkbox" /> Decoration</label>
+            <label><input type="checkbox" /> Parking</label>
+            <label><input type="checkbox" /> DJ</label>
+          </fieldset>
+          <button class="btn btn-primary full" type="submit">Submit for approval</button>
+          <p class="form-note" id="venueSubmitNote">Firebase Storage would receive uploaded gallery files.</p>
+        </form>
+      </div>
+    </section>
+
+    <section id="admin" class="page">
+      <div class="admin-layout">
+        <aside class="admin-sidebar">
+          <span class="brand mini"><span class="brand-mark">VH</span> Admin</span>
+          <button class="active"><i data-lucide="shield-check"></i> Approvals</button>
+          <button><i data-lucide="calendar-days"></i> Bookings</button>
+          <button><i data-lucide="users"></i> Users</button>
+          <button><i data-lucide="message-square"></i> Chats</button>
+        </aside>
+        <section class="admin-main">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Verification control</span>
+              <h1>Pending venue approvals</h1>
+            </div>
+            <span class="status-pill pending" id="pendingCount">0 pending</span>
+          </div>
+          <div class="metric-grid">
+            <article><span>Verified venues</span><strong id="verifiedCount">0</strong></article>
+            <article><span>Bookings this week</span><strong>34</strong></article>
+            <article><span>Live chats</span><strong>18</strong></article>
+          </div>
+          <div class="admin-list" id="adminList"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="auth-modal" id="authModal">
+    <form method="dialog" class="form-card auth-card" id="authForm">
+      <button class="icon-btn close" id="closeAuth" type="button" aria-label="Close"><i data-lucide="x"></i></button>
+      <span class="eyebrow">Firebase Authentication</span>
+      <h2>Continue to VenueHub</h2>
+      <p>Choose the account type you want to use. Admin is never available as a normal user role.</p>
+      <label>Email<input type="email" name="email" placeholder="you@example.com" /></label>
+      <label>Password<input type="password" name="password" placeholder="Minimum 8 characters" /></label>
+      <div class="role-cards" id="roleCards">
+        <label class="role-card active">
+          <input type="radio" name="role" value="user" checked />
+          <i data-lucide="user"></i>
+          <strong>User</strong>
+          <span>Browse, chat, and save venues.</span>
+        </label>
+        <label class="role-card">
+          <input type="radio" name="role" value="client" />
+          <i data-lucide="calendar-heart"></i>
+          <strong>Client</strong>
+          <span>Book events and track requests.</span>
+        </label>
+        <label class="role-card">
+          <input type="radio" name="role" value="owner" />
+          <i data-lucide="building-2"></i>
+          <strong>Venue Owner</strong>
+          <span>Complete the venue form and manage listings.</span>
+        </label>
+      </div>
+      <button class="btn btn-primary full" value="default">Continue</button>
+      <div class="admin-access">
+        <span>Admin staff access</span>
+        <div>
+          <input id="adminPasscode" type="password" placeholder="Admin passcode" />
+          <button class="btn btn-soft" id="adminLoginBtn" type="button">Unlock</button>
+        </div>
+        <p>Prototype passcode: venuehub-admin. Production must use Firebase custom claims.</p>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
