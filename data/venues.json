@@ -1,0 +1,99 @@
+[
+  {
+    "id": "pending-1779853328128",
+    "name": "royal inn palace",
+    "city": "dehradun",
+    "owner": "diya10051@gmail.com",
+    "ownerEmail": "diya10051@gmail.com",
+    "description": "marriages etc",
+    "address": "indira nagar, vasant vihar",
+    "map": "https://maps.app.goo.gl/hU5oG5FY76gDmajUA",
+    "coordinates": "30.3209, 78.0035",
+    "capacity": 800,
+    "minGuests": 100,
+    "maxGuests": 800,
+    "price": 25000,
+    "pricePerDay": 25000,
+    "category": [
+      "Wedding",
+      "Birthday",
+      "Corporate",
+      "Private Party"
+    ],
+    "space": "Indoor + Outdoor",
+    "spaceType": "Indoor + Outdoor",
+    "facilities": [
+      "Catering",
+      "Decoration",
+      "Parking",
+      "DJ"
+    ],
+    "status": "approved",
+    "registrationStatus": "registered",
+    "createdAt": "2026-05-27T03:42:08.128Z",
+    "image": "https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=800&q=80",
+    "reviewedAt": "2026-05-27T03:46:23.377Z"
+  },
+  {
+    "id": "riverstone",
+    "name": "Riverstone Pavilion",
+    "city": "Dehradun",
+    "owner": "Aarav Mehta",
+    "ownerEmail": "aarav.owner@venuehub.local",
+    "status": "rejected",
+    "registrationStatus": "rejected",
+    "category": [
+      "Wedding",
+      "Private Party",
+      "Outdoor"
+    ],
+    "capacity": 320,
+    "price": 185000,
+    "space": "Outdoor",
+    "address": "Mussoorie Road, Dehradun, Uttarakhand",
+    "image": "https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=800&q=80",
+    "createdAt": "2026-05-27T00:08:16.835Z",
+    "reviewedAt": "2026-05-27T03:46:24.784Z"
+  },
+  {
+    "id": "skyline",
+    "name": "Skyline Social Hall",
+    "city": "Bangalore",
+    "owner": "Nisha Rao",
+    "ownerEmail": "nisha.owner@venuehub.local",
+    "status": "approved",
+    "registrationStatus": "registered",
+    "category": [
+      "Corporate",
+      "Birthday",
+      "Indoor"
+    ],
+    "capacity": 500,
+    "price": 280000,
+    "space": "Indoor",
+    "address": "MG Road, Bengaluru, Karnataka",
+    "image": "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=800&q=80",
+    "createdAt": "2026-05-27T00:08:16.836Z",
+    "reviewedAt": "2026-05-27T03:46:35.592Z"
+  },
+  {
+    "id": "orchid",
+    "name": "Orchid House",
+    "city": "Delhi",
+    "owner": "Kabir Sethi",
+    "ownerEmail": "kabir.owner@venuehub.local",
+    "status": "approved",
+    "registrationStatus": "registered",
+    "category": [
+      "Wedding",
+      "Indoor",
+      "Private Party"
+    ],
+    "capacity": 240,
+    "price": 210000,
+    "space": "Indoor + Outdoor",
+    "address": "Saket, New Delhi, Delhi",
+    "image": "https://images.unsplash.com/photo-1469371670807-013ccf25f16a?auto=format&fit=crop&w=800&q=80",
+    "createdAt": "2026-05-27T00:08:16.836Z"
+  }
+]

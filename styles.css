@@ -493,6 +493,54 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); box-sh
   border-radius: var(--radius-sm);
 }
 
+.reviews-section {
+  margin-top: 24px;
+  padding: 22px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--soft-shadow);
+}
+
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.review-card {
+  display: grid;
+  gap: 8px;
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+.review-card p {
+  margin: 0;
+}
+
+.review-card span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.rating-stars {
+  color: var(--accent);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.review-form {
+  box-shadow: none;
+}
+
+.muted-panel {
+  opacity: 0.68;
+}
+
 .booking-layout { grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.75fr); align-items: start; }
 .calendar-nav { display: flex; align-items: center; gap: 10px; }
 .calendar {
@@ -703,6 +751,12 @@ fieldset input { width: auto; min-height: auto; }
   backdrop-filter: var(--blur);
   box-shadow: var(--soft-shadow);
   padding: 20px;
+  transition: 300ms ease;
+}
+
+.owner-panel.attention {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 16%, transparent), var(--soft-shadow);
 }
 
 .panel-head {
@@ -790,6 +844,22 @@ fieldset input { width: auto; min-height: auto; }
 .admin-card { display: grid; grid-template-columns: 92px 1fr auto; gap: 14px; align-items: center; }
 .admin-thumb { width: 92px; height: 82px; border-radius: 12px; background: var(--img) center/cover; }
 .admin-actions { display: flex; gap: 8px; }
+.admin-subsection { margin-top: 28px; }
+.booking-thumb {
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface-strong));
+  color: var(--primary);
+}
+.booking-thumb svg { width: 28px; height: 28px; }
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+}
+.empty-state.compact {
+  padding: 26px;
+}
 
 .auth-modal {
   border: 0;
@@ -887,7 +957,7 @@ fieldset input { width: auto; min-height: auto; }
 @media (max-width: 1080px) {
   .city-grid, .venue-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .discovery-layout, .profile-content, .booking-layout, .owner-layout, .owner-dashboard-grid, .admin-layout, .map-section { grid-template-columns: 1fr; }
+  .discovery-layout, .profile-content, .booking-layout, .owner-layout, .owner-dashboard-grid, .admin-layout, .map-section, .review-grid { grid-template-columns: 1fr; }
   .filters, .booking-card { position: static; }
   .chat-app { grid-template-columns: 290px 1fr; }
   .owner-profile-card { grid-template-columns: 1fr; }
@@ -905,7 +975,7 @@ fieldset input { width: auto; min-height: auto; }
   .hero { min-height: 680px; }
   .hero-media { background-position: 58% center; }
   .section-head, .profile-title, .results-meta, .owner-profile-top { align-items: start; flex-direction: column; }
-  .city-grid, .venue-grid, .category-grid, .skeleton-grid, .detail-grid, .form-grid, .date-summary, .metric-grid, .chat-app, .role-cards, .owner-stats, .owner-post-grid { grid-template-columns: 1fr; }
+  .city-grid, .venue-grid, .category-grid, .skeleton-grid, .detail-grid, .form-grid, .date-summary, .metric-grid, .chat-app, .role-cards, .owner-stats, .owner-post-grid, .review-grid { grid-template-columns: 1fr; }
   .gallery { grid-template-columns: 1fr; grid-auto-rows: 190px; }
   .gallery button:first-child { grid-row: span 1; }
   .calendar { gap: 5px; }

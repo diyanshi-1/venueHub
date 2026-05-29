@@ -174,6 +174,37 @@
           </div>
           <iframe id="mapFrame" title="Venue map" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
         </section>
+        <section class="reviews-section">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Guest feedback</span>
+              <h2>Ratings and reviews</h2>
+              <p id="reviewSummary">Reviews from verified clients appear here.</p>
+            </div>
+          </div>
+          <div class="review-grid" id="venueReviewList"></div>
+          <form class="form-card review-form" id="reviewForm">
+            <div>
+              <span class="eyebrow">Client review</span>
+              <h3>Add your review</h3>
+            </div>
+            <div class="form-grid">
+              <label>Your name<input name="clientName" placeholder="Your name" required /></label>
+              <label>Rating
+                <select name="rating" required>
+                  <option value="5">5 stars</option>
+                  <option value="4">4 stars</option>
+                  <option value="3">3 stars</option>
+                  <option value="2">2 stars</option>
+                  <option value="1">1 star</option>
+                </select>
+              </label>
+              <label class="wide">Review<textarea name="description" placeholder="Share your booking or event experience" required></textarea></label>
+            </div>
+            <button class="btn btn-primary full" type="submit">Post review</button>
+            <p class="form-note" id="reviewNote">Only Client accounts can add reviews. Owners can view them, and admins can delete inappropriate reviews.</p>
+          </form>
+        </section>
       </div>
     </section>
 
@@ -224,7 +255,7 @@
             <label><input type="checkbox" name="services" value="Parking" /> Parking</label>
           </fieldset>
           <button class="btn btn-primary full" type="submit">Send booking request</button>
-          <p class="form-note" id="bookingNote">Firestore would store this request and notify the owner in real time.</p>
+          <p class="form-note" id="bookingNote">This request will be saved in data/bookings.json with status = incomplete.</p>
         </form>
       </div>
     </section>
@@ -264,25 +295,25 @@
             <div class="owner-profile-top">
               <div>
                 <span class="eyebrow">Venue owner profile</span>
-                <h1>Ivory Estate Co.</h1>
-                <p>@ivoryestate.delhi</p>
+                <h1 id="ownerDisplayName">Ivory Estate Co.</h1>
+                <p id="ownerUsername">@ivoryestate.delhi</p>
               </div>
               <div class="profile-actions">
                 <button class="btn btn-soft" data-route="owner"><i data-lucide="plus"></i> Add venue</button>
                 <button class="btn btn-primary" data-route="profile"><i data-lucide="eye"></i> View public listing</button>
               </div>
             </div>
-            <div class="owner-stats">
-              <span><strong>4</strong> listings</span>
-              <span><strong>128</strong> bookings</span>
+            <div class="owner-stats" id="ownerStats">
+              <span><strong>0</strong> listings</span>
+              <span><strong>0</strong> bookings</span>
               <span><strong>4.9</strong> rating</span>
               <span><strong>12m</strong> avg reply</span>
             </div>
-            <p class="owner-bio">Premium wedding, corporate, and private event venues across Delhi NCR with in-house styling, operations, guest management, and weather-safe planning.</p>
+            <p class="owner-bio" id="ownerBio">Premium wedding, corporate, and private event venues across Delhi NCR with in-house styling, operations, guest management, and weather-safe planning.</p>
             <div class="owner-tools">
-              <button class="btn btn-soft"><i data-lucide="settings"></i> Edit profile</button>
-              <button class="btn btn-soft"><i data-lucide="calendar-check"></i> Manage bookings</button>
-              <button class="btn btn-soft"><i data-lucide="message-circle"></i> Owner inbox</button>
+              <button class="btn btn-soft" data-owner-action="editProfile"><i data-lucide="settings"></i> Edit profile</button>
+              <button class="btn btn-soft" data-owner-action="manageBookings"><i data-lucide="calendar-check"></i> Manage bookings</button>
+              <button class="btn btn-soft" data-owner-action="ownerInbox"><i data-lucide="message-circle"></i> Owner inbox</button>
             </div>
           </div>
         </section>
@@ -290,40 +321,23 @@
           <article class="owner-panel">
             <div class="panel-head">
               <h2>Listings</h2>
-              <span class="status-pill pending">1 pending</span>
+              <span class="status-pill pending" id="ownerPendingCount">0 pending</span>
             </div>
-            <div class="owner-listing">
-              <span class="owner-listing-img"></span>
-              <div>
-                <strong>The Ivory Estate</strong>
-                <p>Approved - visible publicly</p>
-              </div>
-              <span class="status-pill verified">Live</span>
-            </div>
-            <div class="owner-listing">
-              <span class="owner-listing-img alt"></span>
-              <div>
-                <strong>Riverstone Pavilion</strong>
-                <p>Waiting for admin verification</p>
-              </div>
-              <span class="status-pill pending">Pending</span>
-            </div>
+            <div id="ownerListingList"></div>
           </article>
-          <article class="owner-panel">
+          <article class="owner-panel" id="ownerBookingsPanel">
             <div class="panel-head">
               <h2>Recent bookings</h2>
-              <button class="text-btn">View all</button>
+              <button class="text-btn" data-owner-action="manageBookings">View all</button>
             </div>
-            <div class="mini-booking">
-              <span>May 24 - 26</span>
-              <strong>Wedding, 450 guests</strong>
-              <p>Client: Aditi Sharma</p>
+            <div id="ownerBookingList"></div>
+          </article>
+          <article class="owner-panel" id="ownerReviewsPanel">
+            <div class="panel-head">
+              <h2>Ratings and reviews</h2>
+              <span class="status-pill live" id="ownerAverageRating">0.0 avg</span>
             </div>
-            <div class="mini-booking">
-              <span>June 3</span>
-              <strong>Corporate annual meet</strong>
-              <p>Client: Northstar Labs</p>
-            </div>
+            <div id="ownerReviewList"></div>
           </article>
         </section>
         <section class="owner-post-grid" aria-label="Owner venue gallery">
@@ -381,7 +395,7 @@
             <label><input type="checkbox" /> DJ</label>
           </fieldset>
           <button class="btn btn-primary full" type="submit">Submit for approval</button>
-          <p class="form-note" id="venueSubmitNote">Firebase Storage would receive uploaded gallery files.</p>
+          <p class="form-note" id="venueSubmitNote">This venue registration will be saved in data/venues.json with status = pending.</p>
         </form>
       </div>
     </section>
@@ -405,10 +419,28 @@
           </div>
           <div class="metric-grid">
             <article><span>Verified venues</span><strong id="verifiedCount">0</strong></article>
-            <article><span>Bookings this week</span><strong>34</strong></article>
-            <article><span>Live chats</span><strong>18</strong></article>
+            <article><span>Stored bookings</span><strong id="bookingCount">0</strong></article>
+            <article><span>Reviews</span><strong id="reviewCount">0</strong></article>
           </div>
           <div class="admin-list" id="adminList"></div>
+          <div class="admin-subsection">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Booking file records</span>
+                <h2>Bookings</h2>
+              </div>
+            </div>
+            <div class="admin-list" id="adminBookingList"></div>
+          </div>
+          <div class="admin-subsection">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Review moderation</span>
+                <h2>Client reviews</h2>
+              </div>
+            </div>
+            <div class="admin-list" id="adminReviewList"></div>
+          </div>
         </section>
       </div>
     </section>
@@ -417,11 +449,11 @@
   <dialog class="auth-modal" id="authModal">
     <form method="dialog" class="form-card auth-card" id="authForm">
       <button class="icon-btn close" id="closeAuth" type="button" aria-label="Close"><i data-lucide="x"></i></button>
-      <span class="eyebrow">Firebase Authentication</span>
+      <span class="eyebrow">Prototype sign in</span>
       <h2>Continue to VenueHub</h2>
       <p>Choose the account type you want to use. Admin is never available as a normal user role.</p>
-      <label>Email<input type="email" name="email" placeholder="you@example.com" /></label>
-      <label>Password<input type="password" name="password" placeholder="Minimum 8 characters" /></label>
+      <label>Email<input type="email" name="email" placeholder="you@example.com" autocomplete="email" required /></label>
+      <label>Password<input type="password" name="password" placeholder="Minimum 8 characters" autocomplete="current-password" minlength="8" required /></label>
       <div class="role-cards" id="roleCards">
         <label class="role-card active">
           <input type="radio" name="role" value="user" checked />
@@ -442,15 +474,32 @@
           <span>Complete the venue form and manage listings.</span>
         </label>
       </div>
-      <button class="btn btn-primary full" value="default">Continue</button>
+      <button class="btn btn-primary full" type="submit" name="loginAction" value="role">Continue</button>
       <div class="admin-access">
         <span>Admin staff access</span>
         <div>
-          <input id="adminPasscode" type="password" placeholder="Admin passcode" />
-          <button class="btn btn-soft" id="adminLoginBtn" type="button">Unlock</button>
+          <input id="adminPasscode" type="password" placeholder="Admin passcode" autocomplete="off" />
+          <button class="btn btn-primary" id="adminLoginBtn" type="submit" name="loginAction" value="admin">Unlock admin</button>
         </div>
-        <p>Prototype passcode: venuehub-admin. Production must use Firebase custom claims.</p>
+        <p>Local prototype passcode: admin12.</p>
       </div>
+    </form>
+  </dialog>
+
+  <dialog class="auth-modal" id="ownerProfileModal">
+    <form method="dialog" class="form-card auth-card" id="ownerProfileForm">
+      <button class="icon-btn close" id="closeOwnerProfile" type="button" aria-label="Close"><i data-lucide="x"></i></button>
+      <span class="eyebrow">Owner profile</span>
+      <h2>Edit venue owner profile</h2>
+      <div class="form-grid">
+        <label>Display name<input name="displayName" id="editOwnerDisplayName" placeholder="Ivory Estate Co." /></label>
+        <label>Username<input name="username" id="editOwnerUsername" placeholder="@ivoryestate.delhi" /></label>
+        <label>Email<input name="email" id="editOwnerEmail" type="email" placeholder="owner@venuehub.local" /></label>
+        <label>Phone<input name="phone" id="editOwnerPhone" placeholder="+91 98765 43210" /></label>
+        <label class="wide">Bio<textarea name="bio" id="editOwnerBio" placeholder="Describe your venue business"></textarea></label>
+      </div>
+      <button class="btn btn-primary full" type="submit">Save profile</button>
+      <p class="form-note">Saved to data/ownerProfile.json for the prototype.</p>
     </form>
   </dialog>
 

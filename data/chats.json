@@ -1,0 +1,41 @@
+[
+  {
+    "id": "ivory-estate",
+    "name": "The Ivory Estate",
+    "image": "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1200&q=82",
+    "messages": [
+      {
+        "mine": false,
+        "text": "Hello, The Ivory Estate is available for selected May dates.",
+        "time": "10:24 AM"
+      },
+      {
+        "mine": true,
+        "text": "Can you support a wedding setup for 450 guests?",
+        "time": "10:25 AM"
+      },
+      {
+        "mine": false,
+        "text": "Yes. We can include decor, stage, valet, catering, and an indoor backup plan.",
+        "time": "10:26 AM"
+      }
+    ]
+  },
+  {
+    "id": "aurora-banquet",
+    "name": "Aurora Banquet",
+    "image": "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200&q=82",
+    "messages": [
+      {
+        "mine": false,
+        "text": "We have two corporate slots open next week.",
+        "time": "9:11 AM"
+      },
+      {
+        "mine": true,
+        "text": "Please share the AV and lighting details.",
+        "time": "9:13 AM"
+      }
+    ]
+  }
+]

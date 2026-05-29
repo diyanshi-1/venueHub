@@ -14,7 +14,7 @@ const categories = [
   { name: "Private Party", icon: "sparkles" }
 ];
 
-const venues = [
+let venues = [
   {
     id: "ivory-estate",
     name: "The Ivory Estate",
@@ -102,13 +102,13 @@ const venues = [
   }
 ];
 
-const adminVenues = [
+let adminVenues = [
   { id: "riverstone", name: "Riverstone Pavilion", city: "Dehradun", owner: "Aarav Mehta", status: "pending", image: "https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=800&q=80" },
   { id: "skyline", name: "Skyline Social Hall", city: "Bangalore", owner: "Nisha Rao", status: "pending", image: "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=800&q=80" },
   { id: "orchid", name: "Orchid House", city: "Delhi", owner: "Kabir Sethi", status: "approved", image: "https://images.unsplash.com/photo-1469371670807-013ccf25f16a?auto=format&fit=crop&w=800&q=80" }
 ];
 
-const conversations = [
+let conversations = [
   {
     id: "ivory-estate",
     name: "The Ivory Estate",
@@ -135,6 +135,18 @@ let activeConversation = conversations[0];
 let calendarMonth = new Date(2026, 4, 1);
 let selectedDates = [];
 let currentSession = { authRole: null, viewRole: null };
+let users = [];
+let bookings = [];
+let reviews = [];
+let fileBackendReady = false;
+let ownerProfile = {
+  displayName: "Ivory Estate Co.",
+  username: "@ivoryestate.delhi",
+  email: "owner@venuehub.local",
+  phone: "+91 98765 43210",
+  bio: "Premium wedding, corporate, and private event venues across Delhi NCR with in-house styling, operations, guest management, and weather-safe planning."
+};
+let lastDataSignature = "";
 
 const publicRoutes = new Set(["home"]);
 const ownerRoutes = new Set(["owner", "ownerProfile"]);
@@ -150,7 +162,8 @@ const rupee = value => new Intl.NumberFormat("en-IN").format(value);
 const qs = selector => document.querySelector(selector);
 const qsa = selector => [...document.querySelectorAll(selector)];
 
-function init() {
+async function init() {
+  await loadFileData();
   renderCities();
   renderCategories();
   hydrateFilters();
@@ -159,15 +172,135 @@ function init() {
   renderCalendar();
   renderConversations();
   renderMessages();
+  renderOwnerProfile();
   renderAdmin();
   bindEvents();
   updateAuthUI();
   routeFromHash();
+  startLiveSync();
   setTimeout(() => {
     qs("#skeletonGrid").classList.add("hidden");
     qs("#venueGrid").classList.remove("hidden");
   }, 650);
   lucide.createIcons();
+}
+
+function startLiveSync() {
+  if (!fileBackendReady) return;
+  setInterval(() => refreshFileData(), 2500);
+}
+
+async function refreshFileData({ forceRender = false } = {}) {
+  if (!fileBackendReady) return;
+
+  try {
+    const data = await apiRequest("/api/data");
+    const signature = JSON.stringify({
+      users: data.users,
+      venues: data.venues,
+      bookings: data.bookings,
+      reviews: data.reviews,
+      chats: data.chats,
+      ownerProfile: data.ownerProfile
+    });
+
+    if (!forceRender && signature === lastDataSignature) return;
+
+    lastDataSignature = signature;
+    users = data.users || [];
+    adminVenues = data.venues || [];
+    bookings = data.bookings || [];
+    reviews = data.reviews || [];
+    conversations = data.chats?.length ? data.chats : conversations;
+    ownerProfile = data.ownerProfile || ownerProfile;
+
+    const refreshedVenue = allPublicVenues().find(venue => venue.id === selectedVenue?.id);
+    if (refreshedVenue) selectedVenue = refreshedVenue;
+    activeConversation = conversations.find(item => item.id === activeConversation?.id) || conversations[0] || activeConversation;
+
+    renderLiveSections();
+  } catch (error) {
+    console.warn(error);
+  }
+}
+
+function renderLiveSections() {
+  const activePage = qs(".page.active")?.id;
+  hydrateFilters();
+  if (activePage === "search") renderVenues();
+  if (activePage === "profile") renderProfile(selectedVenue);
+  if (activePage === "booking") renderCalendar();
+  if (activePage === "chat") {
+    renderConversations();
+    renderMessages();
+  }
+  if (activePage === "ownerProfile") renderOwnerProfile();
+  if (activePage === "admin") renderAdmin();
+}
+
+async function loadFileData() {
+  if (!location.protocol.startsWith("http")) {
+    toast("Run startVenueHub.bat to save prototype data into desktop files.");
+    return;
+  }
+
+  try {
+    const data = await apiRequest("/api/data");
+    users = data.users || [];
+    adminVenues = data.venues || adminVenues;
+    bookings = data.bookings || [];
+    reviews = data.reviews || [];
+    conversations = data.chats?.length ? data.chats : conversations;
+    ownerProfile = data.ownerProfile || ownerProfile;
+    lastDataSignature = JSON.stringify(data);
+    selectedVenue = allPublicVenues()[0] || venues[0];
+    activeConversation = conversations[0] || activeConversation;
+    fileBackendReady = true;
+  } catch (error) {
+    console.warn(error);
+    toast("Local file server unavailable. Changes will stay in browser memory.");
+  }
+}
+
+async function apiRequest(path, options = {}) {
+  const response = await fetch(path, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Request failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+function allPublicVenues() {
+  return [...venues, ...adminVenues]
+    .filter(venue => venue.status === "approved")
+    .map(normalizeVenue);
+}
+
+function normalizeVenue(venue) {
+  return {
+    address: venue.address || `${venue.city || "Venue city"}, India`,
+    location: venue.location || `${venue.city || "India"}, India`,
+    category: venue.category || ["Wedding", "Private Party", "Indoor"],
+    capacity: Number(venue.capacity || venue.maxGuests || 250),
+    price: Number(venue.price || venue.pricePerDay || 150000),
+    space: venue.space || venue.spaceType || "Indoor + Outdoor",
+    image: venue.image || "https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=1200&q=82",
+    gallery: venue.gallery || [
+      venue.image || "https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=1200&q=82",
+      "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=900&q=80"
+    ],
+    booked: venue.booked || [],
+    map: venue.map || `https://www.google.com/maps?q=${encodeURIComponent(venue.city || "India")}&output=embed`,
+    ...venue
+  };
 }
 
 function bindEvents() {
@@ -184,7 +317,12 @@ function bindEvents() {
   qsa("[data-open-auth]").forEach(el => el.addEventListener("click", () => openAuthModal()));
   qs("#closeAuth").addEventListener("click", () => qs("#authModal").close());
   qs("#authForm").addEventListener("submit", submitAuth);
-  qs("#adminLoginBtn").addEventListener("click", unlockAdmin);
+  qs("#adminPasscode").addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      unlockAdmin();
+    }
+  });
   qs("#roleSwitcher").addEventListener("change", switchAdminView);
   qs("#signOutBtn").addEventListener("click", signOut);
   qsa(".role-card input").forEach(input => input.addEventListener("change", syncRoleCards));
@@ -203,8 +341,12 @@ function bindEvents() {
   qs("#prevMonth").addEventListener("click", () => changeMonth(-1));
   qs("#nextMonth").addEventListener("click", () => changeMonth(1));
   qs("#bookingForm").addEventListener("submit", submitBooking);
+  qs("#reviewForm").addEventListener("submit", submitReview);
   qs("#venueForm").addEventListener("submit", submitVenue);
   qs("#chatForm").addEventListener("submit", submitMessage);
+  qsa("[data-owner-action]").forEach(button => button.addEventListener("click", handleOwnerAction));
+  qs("#closeOwnerProfile").addEventListener("click", () => qs("#ownerProfileModal").close());
+  qs("#ownerProfileForm").addEventListener("submit", saveOwnerProfile);
   window.addEventListener("hashchange", routeFromHash);
 }
 
@@ -269,30 +411,151 @@ function openAuthModal() {
   if (!modal.open) modal.showModal();
 }
 
-function submitAuth(event) {
+async function submitAuth(event) {
   event.preventDefault();
+  if (event.submitter?.value === "admin") {
+    unlockAdmin();
+    return;
+  }
   const formData = new FormData(event.currentTarget);
   const role = formData.get("role") || "user";
-  signInAs(role);
+  const credentials = getLoginCredentials();
+  if (!credentials) return;
+
+  if (fileBackendReady) {
+    await refreshFileData({ forceRender: true });
+  }
+
+  let existingUser = findUserByEmail(credentials.email, role) || findUserByEmail(credentials.email);
+  if (existingUser) {
+    if (!validateExistingUser(existingUser, credentials, role)) return;
+    if (!existingUser.password) {
+      existingUser = await rememberExistingPassword(existingUser, credentials.password);
+    }
+    signInAs(role, credentials.email, existingUser);
+    qs("#authModal").close();
+    showPage(role === "owner" ? getOwnerDestination() : "search");
+    return;
+  }
+
+  const existingOwnerVenues = role === "owner" ? getOwnerListingsByEmail(credentials.email) : [];
+  const savedUser = await saveUserRegistration({
+    email: credentials.email,
+    password: credentials.password,
+    role,
+    status: existingOwnerVenues.some(venue => venue.status === "approved") ? "registered" : role === "owner" ? "pending" : "registered"
+  });
+  signInAs(role, credentials.email, savedUser);
   qs("#authModal").close();
-  showPage(role === "owner" ? "ownerProfile" : "search");
+  showPage(role === "owner" ? (existingOwnerVenues.length ? "ownerProfile" : "owner") : "search");
+  if (role === "owner" && !existingOwnerVenues.length) {
+    toast("New owner account created. Add venue details for admin approval.");
+  }
 }
 
 function unlockAdmin() {
   const passcode = qs("#adminPasscode").value.trim();
-  if (passcode !== "venuehub-admin") {
+  if (!passcode) {
+    toast("Enter the admin passcode.");
+    qs("#adminPasscode").focus();
+    return;
+  }
+  if (passcode !== "admin12") {
     toast("Incorrect admin passcode.");
     return;
   }
-  signInAs("admin");
+  signInAs("admin", "admin@venuehub.local", { status: "admin" });
   qs("#authModal").close();
   showPage("admin");
 }
 
-function signInAs(role) {
-  currentSession = { authRole: role, viewRole: role };
+function findUserByEmail(email, role = null) {
+  return users.find(user => {
+    const emailMatches = user.email?.toLowerCase() === email.toLowerCase();
+    return emailMatches && (!role || user.role === role);
+  });
+}
+
+function validateExistingUser(user, credentials, requestedRole) {
+  if (user.password && user.password !== credentials.password) {
+    toast("Incorrect password for this email.");
+    return false;
+  }
+
+  if (user.role !== requestedRole) {
+    toast(`This email is registered as ${roleLabels[user.role] || user.role}.`);
+    return false;
+  }
+
+  return true;
+}
+
+async function rememberExistingPassword(user, password) {
+  const updatedUser = { ...user, password };
+
+  if (fileBackendReady) {
+    const data = await apiRequest("/api/users", {
+      method: "POST",
+      body: updatedUser
+    });
+    users = data.users;
+    return data.user;
+  }
+
+  users = users.map(item => item.id === user.id ? updatedUser : item);
+  return updatedUser;
+}
+
+function getOwnerDestination() {
+  return getOwnerListings().length ? "ownerProfile" : "owner";
+}
+
+function getLoginCredentials() {
+  const form = qs("#authForm");
+  const email = form.elements.email.value.trim();
+  const password = form.elements.password.value.trim();
+
+  if (!email || !password) {
+    form.reportValidity();
+    toast("Enter email and password first.");
+    return null;
+  }
+
+  if (password.length < 8) {
+    form.reportValidity();
+    toast("Password must be at least 8 characters.");
+    return null;
+  }
+
+  return { email, password };
+}
+
+function signInAs(role, email = `${role}@venuehub.local`, user = {}) {
+  currentSession = { authRole: role, viewRole: role, email, userStatus: user.status || "" };
   updateAuthUI();
   toast(`${roleLabels[role]} session active.`);
+}
+
+async function saveUserRegistration(user) {
+  const registration = {
+    id: `user-${Date.now()}`,
+    email: user.email,
+    password: user.password,
+    role: user.role,
+    status: user.status || (user.role === "owner" ? "pending" : "registered"),
+    createdAt: new Date().toISOString()
+  };
+
+  users.unshift(registration);
+
+  if (!fileBackendReady) return registration;
+
+  const data = await apiRequest("/api/users", {
+    method: "POST",
+    body: registration
+  });
+  users = data.users;
+  return data.user;
 }
 
 function signOut() {
@@ -327,6 +590,162 @@ function syncRoleCards() {
   qsa(".role-card").forEach(card => card.classList.toggle("active", card.querySelector("input").checked));
 }
 
+function handleOwnerAction(event) {
+  event.preventDefault();
+  const action = event.currentTarget.dataset.ownerAction;
+
+  if (action === "editProfile") {
+    openOwnerProfileEditor();
+    return;
+  }
+
+  if (action === "manageBookings") {
+    showPage("ownerProfile");
+    renderOwnerProfile();
+    setTimeout(() => {
+      const panel = qs("#ownerBookingsPanel");
+      panel.scrollIntoView({ behavior: "smooth", block: "center" });
+      panel.classList.add("attention");
+      setTimeout(() => panel.classList.remove("attention"), 1300);
+    }, 80);
+    toast("Owner bookings are shown here.");
+    return;
+  }
+
+  if (action === "ownerInbox") {
+    showPage("chat");
+    toast("Owner inbox opened.");
+  }
+}
+
+function openOwnerProfileEditor() {
+  qs("#editOwnerDisplayName").value = ownerProfile.displayName || "";
+  qs("#editOwnerUsername").value = ownerProfile.username || "";
+  qs("#editOwnerEmail").value = ownerProfile.email || currentSession.email || "";
+  qs("#editOwnerPhone").value = ownerProfile.phone || "";
+  qs("#editOwnerBio").value = ownerProfile.bio || "";
+  const modal = qs("#ownerProfileModal");
+  if (!modal.open) modal.showModal();
+}
+
+async function saveOwnerProfile(event) {
+  event.preventDefault();
+  const formData = new FormData(event.currentTarget);
+  const username = formData.get("username") || "@venuehub.owner";
+  ownerProfile = {
+    displayName: formData.get("displayName") || "Venue Owner",
+    username: username.startsWith("@") ? username : `@${username}`,
+    email: formData.get("email") || currentSession.email || "owner@venuehub.local",
+    phone: formData.get("phone") || "",
+    bio: formData.get("bio") || ""
+  };
+
+  if (fileBackendReady) {
+    const data = await apiRequest("/api/owner-profile", {
+      method: "PATCH",
+      body: ownerProfile
+    });
+    ownerProfile = data.ownerProfile;
+  }
+
+  renderOwnerProfile();
+  qs("#ownerProfileModal").close();
+  toast("Owner profile updated and saved.");
+}
+
+function renderOwnerProfile() {
+  const ownerListings = getOwnerListings();
+  const pending = ownerListings.filter(venue => venue.status === "pending").length;
+  const ownerBookings = getOwnerBookings(ownerListings);
+  const ownerReviews = getOwnerReviews(ownerListings);
+  const ownerAverage = averageRating(ownerReviews);
+  const profileBelongsToSession = ownerProfile.email?.toLowerCase() === currentSession.email?.toLowerCase();
+  const displayName = profileBelongsToSession ? ownerProfile.displayName : ownerListings[0]?.owner || currentSession.email || ownerProfile.displayName;
+  const username = profileBelongsToSession ? ownerProfile.username : `@${(displayName || "owner").replace(/[^a-z0-9]+/gi, "").toLowerCase() || "owner"}`;
+  const bio = profileBelongsToSession ? ownerProfile.bio : "Your venue listings and approval status are shown here.";
+
+  qs("#ownerDisplayName").textContent = displayName;
+  qs("#ownerUsername").textContent = username;
+  qs("#ownerBio").textContent = bio;
+
+  qs("#ownerStats").innerHTML = `
+    <span><strong>${ownerListings.length}</strong> listings</span>
+    <span><strong>${ownerBookings.length}</strong> bookings</span>
+    <span><strong>${ownerAverage ? ownerAverage.toFixed(1) : "0.0"}</strong> rating</span>
+    <span><strong>12m</strong> avg reply</span>
+  `;
+  qs("#ownerPendingCount").textContent = `${pending} pending`;
+  qs("#ownerAverageRating").textContent = `${ownerAverage ? ownerAverage.toFixed(1) : "0.0"} avg`;
+
+  qs("#ownerListingList").innerHTML = ownerListings.length ? ownerListings.map(venue => `
+    <div class="owner-listing">
+      <span class="owner-listing-img" style="background-image:url('${venue.image}')"></span>
+      <div>
+        <strong>${venue.name}</strong>
+        <p>${venue.status === "approved" ? "Approved - visible publicly" : venue.status === "rejected" ? "Rejected by admin" : "Waiting for admin verification"}</p>
+      </div>
+      <span class="status-pill ${venue.status === "approved" ? "verified" : venue.status}">${venue.status === "approved" ? "Live" : venue.status}</span>
+    </div>
+  `).join("") : `
+    <div class="empty-state compact">
+      <i data-lucide="building-2"></i>
+      <h3>No listings yet</h3>
+      <p>Add a venue to create your first owner listing.</p>
+    </div>
+  `;
+
+  qs("#ownerBookingList").innerHTML = ownerBookings.length ? ownerBookings.map(booking => `
+    <div class="mini-booking">
+      <span>${booking.fromDate} to ${booking.toDate}</span>
+      <strong>${booking.eventType}, ${booking.guests} guests</strong>
+      <p>${booking.venueName} - ${booking.status}</p>
+    </div>
+  `).join("") : `
+    <div class="empty-state compact">
+      <i data-lucide="calendar-x"></i>
+      <h3>No bookings yet</h3>
+      <p>Bookings made from venue pages will appear here.</p>
+    </div>
+  `;
+
+  qs("#ownerReviewList").innerHTML = ownerReviews.length ? ownerReviews.map(review => reviewCard(review)).join("") : `
+    <div class="empty-state compact">
+      <i data-lucide="star"></i>
+      <h3>No reviews yet</h3>
+      <p>Client ratings for your venues will appear here.</p>
+    </div>
+  `;
+
+  lucide.createIcons();
+}
+
+function getOwnerListings() {
+  if (!currentSession.email) return [];
+
+  const savedListings = getOwnerListingsByEmail(currentSession.email);
+
+  return savedListings.filter((venue, index, rows) => rows.findIndex(item => item.id === venue.id) === index);
+}
+
+function getOwnerListingsByEmail(email) {
+  return adminVenues.filter(venue => {
+    return venue.ownerEmail?.toLowerCase() === email.toLowerCase()
+      || venue.owner?.toLowerCase() === email.toLowerCase();
+  });
+}
+
+function getOwnerBookings(ownerListings = getOwnerListings()) {
+  const listingIds = new Set(ownerListings.map(venue => venue.id));
+  const listingNames = new Set(ownerListings.map(venue => venue.name));
+  return bookings.filter(booking => listingIds.has(booking.venueId) || listingNames.has(booking.venueName));
+}
+
+function getOwnerReviews(ownerListings = getOwnerListings()) {
+  const listingIds = new Set(ownerListings.map(venue => venue.id));
+  const listingNames = new Set(ownerListings.map(venue => venue.name));
+  return reviews.filter(review => listingIds.has(review.venueId) || listingNames.has(review.venueName));
+}
+
 function renderCities() {
   qs("#cityGrid").innerHTML = cities.map(city => `
     <button class="city-card" style="--image:url('${city.image}')" data-city="${city.name}">
@@ -359,10 +778,14 @@ function renderCategories() {
 }
 
 function hydrateFilters() {
-  const cityOptions = [...new Set(venues.map(venue => venue.city))].map(city => `<option>${city}</option>`).join("");
+  const selectedCity = qs("#locationFilter").value;
+  const selectedEvent = qs("#eventFilter").value;
+  const cityOptions = [...new Set(allPublicVenues().map(venue => venue.city).filter(Boolean))].map(city => `<option>${city}</option>`).join("");
   const eventOptions = categories.map(category => `<option>${category.name}</option>`).join("");
-  qs("#locationFilter").insertAdjacentHTML("beforeend", cityOptions);
-  qs("#eventFilter").insertAdjacentHTML("beforeend", eventOptions);
+  qs("#locationFilter").innerHTML = `<option value="">All cities</option>${cityOptions}`;
+  qs("#eventFilter").innerHTML = `<option value="">All events</option>${eventOptions}`;
+  qs("#locationFilter").value = selectedCity;
+  qs("#eventFilter").value = selectedEvent;
   qs("#priceValue").textContent = rupee(Number(qs("#priceFilter").value));
 }
 
@@ -372,7 +795,7 @@ function filteredVenues() {
   const eventType = qs("#eventFilter").value;
   const capacity = Number(qs("#capacityFilter").value);
   const price = Number(qs("#priceFilter").value);
-  return venues.filter(venue => {
+  return allPublicVenues().filter(venue => {
     const searchable = `${venue.name} ${venue.city} ${venue.category.join(" ")} ${venue.space}`.toLowerCase();
     return venue.status === "approved"
       && (!term || searchable.includes(term))
@@ -409,7 +832,7 @@ function renderVenues(initial = false) {
   qs("#resultCount").textContent = `${matches.length} venue${matches.length === 1 ? "" : "s"} found`;
   qs("#emptyState").classList.toggle("hidden", matches.length > 0);
   qsa("[data-view]").forEach(btn => btn.addEventListener("click", () => {
-    selectedVenue = venues.find(venue => venue.id === btn.dataset.view);
+    selectedVenue = allPublicVenues().find(venue => venue.id === btn.dataset.view);
     renderProfile(selectedVenue);
     renderCalendar();
     showPage("profile");
@@ -451,7 +874,55 @@ function renderProfile(venue) {
       <p>${text}</p>
     </div>
   `).join("");
+  renderVenueReviews(venue);
   lucide.createIcons();
+}
+
+function getVenueReviews(venueId) {
+  return reviews.filter(review => review.venueId === venueId);
+}
+
+function renderVenueReviews(venue) {
+  const venueReviews = getVenueReviews(venue.id);
+  const average = averageRating(venueReviews);
+  const role = getEffectiveRole();
+  const canReview = role === "client";
+
+  qs("#reviewSummary").textContent = venueReviews.length
+    ? `${average.toFixed(1)} average from ${venueReviews.length} client review${venueReviews.length === 1 ? "" : "s"}.`
+    : "No client reviews yet.";
+
+  qs("#venueReviewList").innerHTML = venueReviews.length ? venueReviews.map(review => reviewCard(review)).join("") : `
+    <div class="empty-state compact">
+      <i data-lucide="star"></i>
+      <h3>No reviews yet</h3>
+      <p>Client reviews for this venue will appear here.</p>
+    </div>
+  `;
+
+  qs("#reviewForm").classList.toggle("muted-panel", !canReview);
+  qs("#reviewForm").querySelectorAll("input, select, textarea, button").forEach(control => {
+    control.disabled = !canReview;
+  });
+  qs("#reviewNote").textContent = canReview
+    ? "Your review will be saved to data/reviews.json and visible to the owner."
+    : "Only Client accounts can add reviews. Log in as Client to post feedback.";
+}
+
+function reviewCard(review) {
+  return `
+    <article class="review-card">
+      <div class="rating-stars">${"★".repeat(Number(review.rating))}${"☆".repeat(5 - Number(review.rating))}</div>
+      <strong>${review.clientName || "Client"}</strong>
+      <p>${review.description}</p>
+      <span>${review.venueName} - ${new Date(review.createdAt).toLocaleDateString("en-IN")}</span>
+    </article>
+  `;
+}
+
+function averageRating(rows) {
+  if (!rows.length) return 0;
+  return rows.reduce((sum, review) => sum + Number(review.rating || 0), 0) / rows.length;
 }
 
 function changeMonth(offset) {
@@ -497,15 +968,87 @@ function toIso(date) {
   return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10);
 }
 
-function submitBooking(event) {
+async function submitBooking(event) {
   event.preventDefault();
   if (!selectedDates.length) {
     toast("Select at least one available date first.");
     return;
   }
-  qs("#bookingNote").textContent = "Booking request created with status = pending. Owner receives a Firestore realtime update.";
-  toast("Booking request sent.");
+  const formData = new FormData(event.target);
+  const booking = {
+    id: `booking-${Date.now()}`,
+    venueId: selectedVenue.id,
+    venueName: selectedVenue.name,
+    owner: selectedVenue.owner || "Venue owner",
+    clientEmail: currentSession.email || formData.get("email"),
+    name: formData.get("name"),
+    email: formData.get("email"),
+    phone: formData.get("phone"),
+    eventType: formData.get("eventType"),
+    guests: Number(formData.get("guests") || 0),
+    services: formData.getAll("services"),
+    fromDate: selectedDates[0],
+    toDate: selectedDates[1] || selectedDates[0],
+    status: "incomplete",
+    createdAt: new Date().toISOString()
+  };
+
+  bookings.unshift(booking);
+  selectedVenue.booked = [...new Set([...(selectedVenue.booked || []), ...selectedDates])];
+
+  if (fileBackendReady) {
+    const data = await apiRequest("/api/bookings", {
+      method: "POST",
+      body: booking
+    });
+    bookings = data.bookings;
+  }
+
+  renderOwnerProfile();
+  renderAdmin();
+  renderCalendar();
+  qs("#bookingNote").textContent = "Booking saved to data/bookings.json with status = incomplete.";
+  toast("Booking saved in local file.");
   event.target.reset();
+}
+
+async function submitReview(event) {
+  event.preventDefault();
+
+  if (getEffectiveRole() !== "client") {
+    toast("Only Client accounts can add ratings and reviews.");
+    return;
+  }
+
+  const formData = new FormData(event.target);
+  const review = {
+    id: `review-${Date.now()}`,
+    venueId: selectedVenue.id,
+    venueName: selectedVenue.name,
+    ownerEmail: selectedVenue.ownerEmail || selectedVenue.owner || "",
+    clientEmail: currentSession.email,
+    clientName: formData.get("clientName"),
+    rating: Number(formData.get("rating")),
+    description: formData.get("description"),
+    status: "visible",
+    createdAt: new Date().toISOString()
+  };
+
+  reviews.unshift(review);
+
+  if (fileBackendReady) {
+    const data = await apiRequest("/api/reviews", {
+      method: "POST",
+      body: review
+    });
+    reviews = data.reviews;
+  }
+
+  renderVenueReviews(selectedVenue);
+  renderOwnerProfile();
+  renderAdmin();
+  event.target.reset();
+  toast("Review saved and visible to the venue owner.");
 }
 
 function renderConversations() {
@@ -536,13 +1079,24 @@ function renderMessages() {
   qs("#messages").scrollTop = qs("#messages").scrollHeight;
 }
 
-function submitMessage(event) {
+async function submitMessage(event) {
   event.preventDefault();
   const input = qs("#messageInput");
   const text = input.value.trim();
   if (!text) return;
-  activeConversation.messages.push({ mine: true, text, time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) });
+  const message = { mine: true, text, time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }), createdAt: new Date().toISOString() };
+  activeConversation.messages.push(message);
   input.value = "";
+
+  if (fileBackendReady) {
+    const data = await apiRequest(`/api/chats/${activeConversation.id}/messages`, {
+      method: "POST",
+      body: message
+    });
+    conversations = data.chats;
+    activeConversation = conversations.find(item => item.id === activeConversation.id) || conversations[0];
+  }
+
   renderMessages();
   renderConversations();
   setTimeout(() => {
@@ -553,22 +1107,49 @@ function submitMessage(event) {
   }, 900);
 }
 
-function submitVenue(event) {
+async function submitVenue(event) {
   event.preventDefault();
   const formData = new FormData(event.target);
   const venueName = formData.get("venueName") || "New Venue";
   const city = formData.get("city") || "Pending city";
-  adminVenues.unshift({
+  const venue = {
     id: `pending-${Date.now()}`,
     name: venueName,
     city,
-    owner: "Ivory Estate Co.",
+    owner: currentSession.email || "Venue owner",
+    ownerEmail: currentSession.email || "owner@venuehub.local",
+    description: formData.get("description") || "",
+    address: formData.get("address") || city,
+    map: formData.get("maps") || `https://www.google.com/maps?q=${encodeURIComponent(city)}&output=embed`,
+    coordinates: formData.get("coordinates") || "",
+    capacity: Number(formData.get("maxGuests") || 250),
+    minGuests: Number(formData.get("minGuests") || 20),
+    maxGuests: Number(formData.get("maxGuests") || 250),
+    price: Number(formData.get("price") || 150000),
+    pricePerDay: Number(formData.get("price") || 150000),
+    category: ["Wedding", "Birthday", "Corporate", "Private Party"],
+    space: formData.get("space") || "Indoor + Outdoor",
+    spaceType: formData.get("space") || "Indoor + Outdoor",
+    facilities: ["Catering", "Decoration", "Parking", "DJ"],
     status: "pending",
+    registrationStatus: "pending",
+    createdAt: new Date().toISOString(),
     image: "https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=800&q=80"
-  });
+  };
+  adminVenues.unshift(venue);
+
+  if (fileBackendReady) {
+    const data = await apiRequest("/api/venues", {
+      method: "POST",
+      body: venue
+    });
+    adminVenues = data.venues;
+  }
+
+  renderOwnerProfile();
   renderAdmin();
-  qs("#venueSubmitNote").textContent = "Venue submitted with status = pending. It will appear publicly only after admin approval.";
-  toast("Venue submitted for admin approval.");
+  qs("#venueSubmitNote").textContent = "Venue saved to data/venues.json with status = pending. Admin approval will update the same file row.";
+  toast("Venue registration saved as pending.");
   event.target.reset();
   showPage("ownerProfile");
 }
@@ -578,6 +1159,8 @@ function renderAdmin() {
   const verified = adminVenues.filter(venue => venue.status === "approved").length + venues.length;
   qs("#pendingCount").textContent = `${pending} pending`;
   qs("#verifiedCount").textContent = verified;
+  qs("#bookingCount").textContent = bookings.length;
+  qs("#reviewCount").textContent = reviews.length;
   qs("#adminList").innerHTML = adminVenues.map(venue => `
     <article class="admin-card">
       <span class="admin-thumb" style="--img:url('${venue.image}')"></span>
@@ -587,17 +1170,103 @@ function renderAdmin() {
         <p>${venue.city} - Owner: ${venue.owner}</p>
       </div>
       <div class="admin-actions">
-        <button class="btn btn-primary" data-admin="approve" data-admin-id="${venue.id}">Approve</button>
-        <button class="btn btn-soft" data-admin="reject" data-admin-id="${venue.id}">Reject</button>
+        <button class="btn btn-primary" data-admin="approve" data-admin-id="${venue.id}" ${venue.status === "approved" ? "disabled" : ""}>Approve</button>
+        <button class="btn btn-soft" data-admin="reject" data-admin-id="${venue.id}" ${venue.status === "rejected" ? "disabled" : ""}>Reject</button>
       </div>
     </article>
   `).join("");
-  qsa("[data-admin]").forEach(button => button.addEventListener("click", () => {
+  qs("#adminBookingList").innerHTML = bookings.length ? bookings.map(booking => `
+    <article class="admin-card booking-row">
+      <span class="admin-thumb booking-thumb"><i data-lucide="calendar-check"></i></span>
+      <div>
+        <span class="status-pill ${booking.status === "completed" ? "verified" : "pending"}">${booking.status}</span>
+        <h3>${booking.venueName}</h3>
+        <p>${booking.eventType} - ${booking.fromDate} to ${booking.toDate} - ${booking.guests} guests</p>
+      </div>
+      <div class="admin-actions">
+        <button class="btn btn-primary" data-booking-status="completed" data-booking-id="${booking.id}" ${booking.status === "completed" ? "disabled" : ""}>Mark completed</button>
+        <button class="btn btn-soft" data-booking-status="incomplete" data-booking-id="${booking.id}" ${booking.status === "incomplete" ? "disabled" : ""}>Incomplete</button>
+      </div>
+    </article>
+  `).join("") : `
+    <div class="empty-state compact">
+      <i data-lucide="calendar-x"></i>
+      <h3>No bookings saved yet</h3>
+      <p>Bookings submitted from the calendar will appear here and in data/bookings.json.</p>
+    </div>
+  `;
+  qs("#adminReviewList").innerHTML = reviews.length ? reviews.map(review => `
+    <article class="admin-card review-row">
+      <span class="admin-thumb booking-thumb"><i data-lucide="star"></i></span>
+      <div>
+        <span class="status-pill live">${Number(review.rating).toFixed(0)} stars</span>
+        <h3>${review.venueName}</h3>
+        <p>${review.clientName || "Client"} - ${review.description}</p>
+      </div>
+      <div class="admin-actions">
+        <button class="btn btn-soft" data-review-delete="${review.id}">Delete review</button>
+      </div>
+    </article>
+  `).join("") : `
+    <div class="empty-state compact">
+      <i data-lucide="star"></i>
+      <h3>No reviews yet</h3>
+      <p>Client ratings and reviews will appear here for moderation.</p>
+    </div>
+  `;
+  qsa("[data-admin]").forEach(button => button.addEventListener("click", async () => {
     const venue = adminVenues.find(item => item.id === button.dataset.adminId);
     venue.status = button.dataset.admin === "approve" ? "approved" : "rejected";
+    venue.registrationStatus = venue.status === "approved" ? "registered" : "rejected";
+    venue.reviewedAt = new Date().toISOString();
+
+    if (fileBackendReady) {
+      const data = await apiRequest(`/api/venues/${venue.id}/status`, {
+        method: "PATCH",
+        body: { status: venue.status }
+      });
+      adminVenues = data.venues;
+      users = data.users;
+    }
+
+    hydrateFilters();
+    renderVenues();
+    renderOwnerProfile();
     renderAdmin();
-    toast(`${venue.name} ${venue.status}.`);
+    toast(`${venue.name} ${venue.status}. File updated.`);
   }));
+  qsa("[data-booking-status]").forEach(button => button.addEventListener("click", async () => {
+    const booking = bookings.find(item => item.id === button.dataset.bookingId);
+    booking.status = button.dataset.bookingStatus;
+
+    if (fileBackendReady) {
+      const data = await apiRequest(`/api/bookings/${booking.id}/status`, {
+        method: "PATCH",
+        body: { status: booking.status }
+      });
+      bookings = data.bookings;
+    }
+
+    renderAdmin();
+    toast(`Booking marked ${booking.status}. File updated.`);
+  }));
+  qsa("[data-review-delete]").forEach(button => button.addEventListener("click", async () => {
+    const reviewId = button.dataset.reviewDelete;
+    reviews = reviews.filter(review => review.id !== reviewId);
+
+    if (fileBackendReady) {
+      const data = await apiRequest(`/api/reviews/${reviewId}`, {
+        method: "DELETE"
+      });
+      reviews = data.reviews;
+    }
+
+    renderVenueReviews(selectedVenue);
+    renderOwnerProfile();
+    renderAdmin();
+    toast("Review deleted from local files.");
+  }));
+  lucide.createIcons();
 }
 
 function toast(message) {

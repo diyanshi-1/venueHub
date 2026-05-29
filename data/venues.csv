@@ -1,0 +1,5 @@
+id,name,city,owner,ownerEmail,status,registrationStatus,price,capacity,createdAt,reviewedAt
+"pending-1779853328128","royal inn palace","dehradun","diya10051@gmail.com","diya10051@gmail.com","approved","registered","25000","800","2026-05-27T03:42:08.128Z","2026-05-27T03:46:23.377Z"
+"riverstone","Riverstone Pavilion","Dehradun","Aarav Mehta","aarav.owner@venuehub.local","rejected","rejected","185000","320","2026-05-27T00:08:16.835Z","2026-05-27T03:46:24.784Z"
+"skyline","Skyline Social Hall","Bangalore","Nisha Rao","nisha.owner@venuehub.local","approved","registered","280000","500","2026-05-27T00:08:16.836Z","2026-05-27T03:46:35.592Z"
+"orchid","Orchid House","Delhi","Kabir Sethi","kabir.owner@venuehub.local","approved","registered","210000","240","2026-05-27T00:08:16.836Z",""
